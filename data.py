@@ -55,11 +55,11 @@ model.add(Embedding(input_dim=len(word_index)+1,output_dim=word_vector_dim))
 model.add(LSTM(128,input_dim=word_vector_dim,activation='sigmoid'))
 model.add(Dense(256, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
-# 计算
+
 model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
 print(model.summary())
 print(type(x_train))
-#训练
+
 model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=32, nb_epoch=10, verbose=1)
 score = model.evaluate(x_test, y_test)
 print(score)
