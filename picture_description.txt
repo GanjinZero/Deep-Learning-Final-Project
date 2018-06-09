@@ -1,0 +1,39 @@
+1 - trival model:11分类 embedding by keras
+x->embed(300)->lstm(256)->dense(512)->dense(128)->softmax(11)
+train acc:85% 
+val acc:23%
+
+2 - trival model:11分类 embedding by keras
+x->embed(300)->gru(256)->dense(512)->dense(128)->softmax(11)
+train acc:99.93% 
+val acc:27%
+
+3 - 0-1 output embedding by sentence2vec (max of word2vec) 70 epocs
+x->embed(100)->gru(256)->dense(512)->dense(256)->sigmoid(1)
+train loss:4.78*10^-4
+val loss:0.0134
+
+4 - 0-1 output embedding by word2vec 70 epocs
+x->embed(100)->gru(256)->dense(512)->dense(256)->sigmoid(1)
+train loss:1.3*10^-4
+val loss:0.0274
+
+5 - 0-1 output embedding by sentence2vec (max of word2vec) 70 epocs
+x->embed(100)->LSTM(256)->dense(512)->dense(256)->sigmoid(1)
+train loss: 0.0045
+val loss: 0.0098
+
+6 - 0-1 output embedding by sentence2vec (max of word2vec) 70 epocs
+x->embed(100)->LSTM(256)->LSTM(256)->dense(512)->dense(256)->sigmoid(1)
+train loss: 0.0071 
+val loss: 0.009
+
+7 - 0-1 output embedding by sentence2vec (max of word2vec) 70 epocs
+x->embed(100)->LSTM(256)*4->dense(512)->dense(256)->sigmoid(1)
+train loss: 0.0062 
+val loss: 0.0087
+
+8 - 0-1 output embedding by sentence2vec (max of word2vec) 70 epocs
+x->embed(100)->LSTM(256,dropout 0.5)->dense(512)->dense(256)->sigmoid(1)
+train loss: 0.0100
+val loss: 0.0113
