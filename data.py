@@ -22,12 +22,11 @@ from keras import regularizers
 import random
 import numpy as np
 
-#import os
-
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-#os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
 random.seed(72)
+
+epoch = 60
+roc_save_train = []
+roc_save_val = []
 
 class LossHistory(keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
@@ -65,17 +64,62 @@ class LossHistory(keras.callbacks.Callback):
         plt.ylabel('acc-loss')
         plt.legend(loc="upper right")
         plt.show()
+        
+class roc_callback(keras.callbacks.Callback):
+
+    def __init__(self,training_data, validation_data):
+
+        #roc_save_train = []
+        #roc_save_val = []
+        self.x = training_data[0]
+        self.y = training_data[1]
+        self.x_val = validation_data[0]
+        self.y_val = validation_data[1]
+        
+    
+    def on_train_begin(self, logs={}):
+        return
+ 
+    def on_train_end(self, logs={}):
+        return
+ 
+    def on_epoch_begin(self, epoch, logs={}):
+        return
+ 
+    def on_epoch_end(self, epoch, logs={}):
+        global roc_save_train
+        global roc_save_val        
+        y_pred_train = np.array(self.model.predict(self.x)).reshape(self.x.shape[0])
+        judger_train = np.array(1/100*np.ones(self.x.shape[0]))
+        delta_train = abs(y_pred_train-np.array(self.y))
+        minus = np.sign(judger_train-delta_train)
+        acc_class_train =(sum(minus)+self.x.shape[0])/(2*self.x.shape[0]) 
+        
+        y_pred_val = np.array(self.model.predict(self.x_val)).reshape(self.x_val.shape[0])
+        judger_val = np.array(1/100*np.ones(self.x_val.shape[0]))
+        delta_val = abs(y_pred_val-np.array(self.y_val))
+        minus = np.sign(judger_val-delta_val)
+        acc_class_val =(sum(minus)+self.x_val.shape[0])/(2*self.x_val.shape[0]) 
+        
+        print ("acc_train %.4f"%(acc_class_train),"acc_val %.4f"%(acc_class_val))
+        roc_save_train = roc_save_train+[acc_class_train]
+        roc_save_val = roc_save_val+[acc_class_val]
+        return
+ 
+    def on_batch_begin(self, batch, logs={}):
+        return
+ 
+    def on_batch_end(self, batch, logs={}):
+        return
 
 train = pd.read_csv('training_set_rel3.tsv', sep='\t', header=0)
 essay_count = numpy.size(train,0)
 
-#valid = pd.read_csv('valid_set.tsv', sep='\t', header=0)
-
 punc = '[:;,!\"]'
 
 sentences = []
-for i in range(1783):
-    essay = train["essay"][i]
+for i in range(723):
+    essay = train["essay"][12253+i]
     essay = re.sub(punc, '', essay)
     essay = re.sub('\.',' .',essay)
     essay = essay.split(" ")
@@ -89,51 +133,67 @@ for i in range(1783):
     sentences.append(essay)
     
 tokenizer = Tokenizer(num_words=1000000)
-tokenizer.fit_on_texts(train["essay"][0:1783])
-sequences = tokenizer.texts_to_sequences(train["essay"][0:1783])
+tokenizer.fit_on_texts(train["essay"][12253:12976])
+sequences = tokenizer.texts_to_sequences(train["essay"][12253:12976])
 word_index = tokenizer.word_index
 print('Found %s unique tokens.' % len(word_index))
-data_x = pad_sequences(sequences, maxlen=600)
+#data_x = pad_sequences(sequences, maxlen=870)
 
+max_length = 1000
+word_vector_dim = 100
+model_word = Word2Vec(sentences, size=word_vector_dim, window=5, min_count=1, workers=1)
+#generate input by word2vec
+data_x = np.zeros(shape=[723,max_length,word_vector_dim])
+for i in range(723):
+    #1783*700*word_vector_dim
+    for j in range(len(sentences[i])):
+        try:
+            now_word = model_word.wv.__getitem__(sentences[i][j])
+        except KeyError:
+            now_word = np.zeros((1,word_vector_dim))
+        data_x[i,(max_length-len(sentences[i])+j)] = now_word 
 
-word_vector_dim = 300
-#model_word = Word2Vec(sentences, size=word_vector_dim, window=5, min_count=1, workers=1)
-
-number = np.arange(0,1783,1)
+number = np.arange(0,723,1)
 random.shuffle(number)
-slice_train = number[0:1400]
-slice_test = number[1400:1783]
+slice_train = number[0:540]
+slice_test = number[540:723]
 
 x_train = data_x[slice_train]
 x_test = data_x[slice_test]
 
-data_y=(train["domain1_score"][0:1783]-2)
+data_y=train["domain1_score"][12253:12976]
+min_data_y=min(train["domain1_score"][12253:12976])
+max_data_y=max(train["domain1_score"][12253:12976])
+data_y=(data_y-min_data_y)/(max_data_y-min_data_y)
 
-y_train = data_y[slice_train]
-y_train = keras.utils.to_categorical(y_train, num_classes=11)
-y_test = data_y[slice_test]
-y_test = keras.utils.to_categorical(y_test, num_classes=11)
-#x_train=train["essay"][0:1783]
-KTF.set_session(tf.Session(config=tf.ConfigProto(device_count={'gpu':0})))    
+y_train = data_y[slice_train+12253]
+y_test = data_y[slice_test+12253]
+   
 model = Sequential()
-model.add(Embedding(input_dim=len(word_index)+1,output_dim=word_vector_dim))
-model.add(GRU(256))
+#model.add(Embedding(input_dim=len(word_index)+1,output_dim=word_vector_dim))
+model.add(LSTM(256, input_shape=[max_length,100]))
 model.add(Dense(512, activation='relu'))
-model.add(Dense(128, activation='relu'))
-
-model.add(Dense(11, activation='softmax',activity_regularizer=regularizers.l2(0.01)))
-#model.add(Dense(1, activation='sigmoid',activity_regularizer=regularizers.l1(0.01)))
-
-#model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.add(Dense(256, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+model.compile(loss='mse', optimizer=adam , metrics=[])
 history = LossHistory()
 print(model.summary())
-#print(type(x_train))
-model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=256, nb_epoch=30, verbose=1,callbacks=[history])
-#score = model.evaluate(x_test, y_test)
-#print(score)
 
-#y_predict=model.predict(x_test)
-#y_predict=y_predict.reshape(383)
-#y_delta=y_predict-y_test
-history.loss_plot('epoch')
+model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=256, nb_epoch=epoch, verbose=1,callbacks=[history,roc_callback(training_data=[x_train, y_train], validation_data=[x_test, y_test])])
+#history.loss_plot('epoch')
+
+iters = range(len(history.losses['epoch']))
+ax1 = plt.figure().add_subplot(111)
+ax1.plot(iters, history.losses['epoch'], 'g', label='train loss')
+ax1.plot(iters, history.val_loss['epoch'], 'k', label='val loss')
+ax1.grid(True)
+ax1.set_xlabel('epoch')
+ax1.set_ylabel('loss')
+ax1.legend(loc="upper right")
+ax2 = ax1.twinx()
+ax2.set_ylim([0, 1])
+ax2.plot(iters, roc_save_train, 'r', label='train acc')
+ax2.plot(iters, roc_save_val, 'b', label='val acc')
+ax2.legend(loc="upper left")
+plt.show()

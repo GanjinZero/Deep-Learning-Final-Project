@@ -1,0 +1,31 @@
+1 - word2vec-dataset1
+loss: 0.0077 - val_loss: 0.0170
+acc_train 0.4379 acc_val 0.3029
+
+2 - sentence-dataset1
+loss: 0.0045 - val_loss: 0.0090
+acc_train 0.5779 acc_val 0.4334
+
+3 - sentence+pos-dataset1
+loss: 0.0071 - val_loss: 0.0096
+acc_train 0.3864 acc_val 0.3890
+
+4 - baseline-dataset1
+loss: 4.4328e-04 - val_loss: 0.0198
+acc_train 0.9900 acc_val 0.3473
+
+5 - word2vec-dataset2
+0.0028 - val_loss: 0.0174
+acc_train 0.1556 acc_val 0.0383
+
+6 - sentence-dataset2
+0.0060 - val_loss: 0.0078
+acc_train 0.1241 acc_val 0.1093
+
+7 - sentence+pos-dataset2
+0.0066 - val_loss: 0.0069
+acc_train 0.1167 acc_val 0.0820
+
+8 - baseline-dataset2
+7.5116e-04 - val_loss: 0.0093
+acc_train 0.5796 acc_val 0.1475
